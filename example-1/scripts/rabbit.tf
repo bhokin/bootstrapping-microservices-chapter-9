@@ -1,4 +1,3 @@
-
 resource "kubernetes_deployment" "rabbit" {
   metadata {
     name = "rabbit"
@@ -26,7 +25,7 @@ resource "kubernetes_deployment" "rabbit" {
 
       spec {
         container {
-          image = "rabbitmq:3.8.1-management"
+          image = "rabbitmq:3.8.5-management"
           name  = "rabbit"
 
           port {

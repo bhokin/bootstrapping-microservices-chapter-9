@@ -3,7 +3,7 @@ locals {
     username = azurerm_container_registry.container_registry.admin_username
     password = azurerm_container_registry.container_registry.admin_password
     rabbit = "amqp://guest:guest@rabbit:5672"
-    database = "mongodb://db:27017"
+    database = "mongodb://database:27017"
 }
 
 module "gateway-microservice" {
@@ -22,6 +22,7 @@ module "gateway-microservice" {
 
 module "video-streaming-microservice" {
     source ="./modules/microservice"
+    session_affinity = "ClientIP"
     service_name = "video-streaming"
     login_server = local.login_server
     username = local.username
@@ -34,6 +35,7 @@ module "video-streaming-microservice" {
 
 module "video-upload-microservice" {
     source ="./modules/microservice"
+    session_affinity = "ClientIP"
     service_name = "video-upload"
     login_server = local.login_server
     username = local.username
@@ -46,6 +48,7 @@ module "video-upload-microservice" {
 
 module "azure-storage-microservice" {
     source ="./modules/microservice"
+    session_affinity = "ClientIP"
     service_name = "azure-storage"
     dns_name = "video-storage"
     login_server = local.login_server
@@ -60,6 +63,7 @@ module "azure-storage-microservice" {
 
 module "history-microservice" {
     source ="./modules/microservice"
+    session_affinity = "ClientIP"
     service_name = "history"
     login_server = local.login_server
     username = local.username
@@ -74,6 +78,7 @@ module "history-microservice" {
 
 module "metadata-microservice" {
     source ="./modules/microservice"
+    session_affinity = "ClientIP"
     service_name = "metadata"
     login_server = local.login_server
     username = local.username
