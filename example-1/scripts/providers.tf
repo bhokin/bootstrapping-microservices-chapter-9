@@ -1,6 +1,5 @@
 provider "azurerm" {
-    version = "3.0.0"
-    features {}
+    version = "1.38.0"
 }
 
 provider "tls" {
