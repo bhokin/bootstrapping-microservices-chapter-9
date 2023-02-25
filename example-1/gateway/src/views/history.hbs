@@ -48,6 +48,21 @@
                     </table>
                 </div>
             </div>
+
+            <div class="m-4 p-4 text-center border-solid border-2 border-red-300 rounded-md">
+                <h1>Advertisement: Link</h1>
+                {{#if advertising}}
+                    {{#each advertising}}
+                        <div class="mt-1">
+                            {{this._id}}
+                            {{this.name}}
+                            {{this.link}}
+                        </div>
+                    {{/each}}
+                {{else}}
+                    Bhokin's advertising
+                {{/if}}
+            </div>
         </div>
     </body>
 </html>
