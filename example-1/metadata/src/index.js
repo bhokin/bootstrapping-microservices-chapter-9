@@ -40,6 +40,7 @@ function connectRabbit(rabbitHost) {
 function setupHandlers(microservice) {
 
     const videosCollection = microservice.db.collection("videos");
+    const advertisingCollection = microservice.db.collection("advertising");
 
     //
     // HTTP GET API to retrieve list of videos from the database.
@@ -75,6 +76,42 @@ function setupHandlers(microservice) {
             })
             .catch(err => {
                 console.error(`Failed to get video ${videoId}.`);
+                console.error(err);
+                res.sendStatus(500);
+            });
+    });
+
+    microservice.app.get("/advertisings", (req, res) => {
+        return advertisingCollection.find() // Returns a promise so we can await the result in the test.
+            .toArray() // In a real application this should be paginated.
+            .then(advertising => {
+                res.json({
+                    advertising: advertising
+                });
+            })
+            .catch(err => {
+                console.error("Failed to get advertisingIds collection from database!");
+                console.error(err && err.stack || err);
+                res.sendStatus(500);
+            });
+    });
+
+    //
+    // HTTP GET API to retrieve details for a particular advertising.
+    //
+    microservice.app.get("/advertising", (req, res) => {
+        const advertisingId = new mongodb.ObjectID(req.query.id);
+        return advertisingCollection.findOne({ _id: advertisingId }) // Returns a promise so we can await the result in the test.
+            .then(advertising => {
+                if (!advertising) {
+                    res.sendStatus(404); // advertising with the requested ID doesn't exist!
+                }
+                else {
+                    res.json({ advertising });
+                }
+            })
+            .catch(err => {
+                console.error(`Failed to get advertising ${advertisingId}.`);
                 console.error(err);
                 res.sendStatus(500);
             });
