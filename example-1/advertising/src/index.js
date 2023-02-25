@@ -1,126 +1,32 @@
 const express = require("express");
-const mongodb = require("mongodb");
-const amqp = require('amqplib');
-const bodyParser = require("body-parser");
+const advertising = require("./fixtures/advertising");
 
-if (!process.env.DBHOST) {
-    throw new Error("Please specify the databse host using environment variable DBHOST.");
-}
-
-if (!process.env.DBNAME) {
-    throw new Error("Please specify the name of the database using environment variable DBNAME");
-}
-
-if (!process.env.RABBIT) {
-    throw new Error("Please specify the name of the RabbitMQ host using environment variable RABBIT");
-}
-
-const DBHOST = process.env.DBHOST;
-const DBNAME = process.env.DBNAME;
-const RABBIT = process.env.RABBIT;
-
-//
-// Connect to the database.
-//
-function connectDb() {
-    return mongodb.MongoClient.connect(DBHOST) 
-        .then(client => {
-            return client.db(DBNAME);
-        });
-}
-
-//
-// Connect to the RabbitMQ server.
-//
-function connectRabbit() {
-
-    console.log(`Connecting to RabbitMQ server at ${RABBIT}.`);
-
-    return amqp.connect(RABBIT) // Connect to the RabbitMQ server.
-        .then(messagingConnection => {
-            console.log("Connected to RabbitMQ.");
-
-            return messagingConnection.createChannel(); // Create a RabbitMQ messaging channel.
-        });
-}
-
-//
-// Setup event handlers.
-//
-function setupHandlers(app, db, messageChannel) {
-
-    const advertisingCollection = db.collection("advertising");
-
-    //
-    // HTTP GET API to retrieve advertising.
-    //
+function setupHandlers(app) {
     app.get("/advertising", (req, res) => {
-        advertisingCollection.find() // Retreive advertising list from database.
-            .toArray() // In a real application this should be paginated.
-            .then(advertising => {
-                res.json({ advertising });
-            })
-            .catch(err => {
-                console.error("Failed to get advertising collection.");
-                console.error(err);
-                res.sendStatus(500);
-            });
+        const randomNum = randomNumber(advertising.length);
+        const slice = advertising.slice(randomNum);
+        res.send(slice)
     });
-
-    function consumeViewedMessage(msg) { // Handler for coming messages.
-        console.log("Received a 'viewed' message");
-
-        const parsedMsg = JSON.parse(msg.content.toString()); // Parse the JSON message.
-        
-        return advertisingCollection.insertOne({ advertisingId: parsedMsg.advertising.id, watched: new Date() }) // Record the "view" in the database.
-            .then(() => {
-                console.log("Acknowledging message was handled.");
-                
-                messageChannel.ack(msg); // If there is no error, acknowledge the message.
-            });
-    };
-
-    return messageChannel.assertExchange("viewed", "fanout") // Assert that we have a "viewed" exchange.
-        .then(() => {
-            return messageChannel.assertQueue("", {}); // Create an anonyous queue.
-        })
-        .then(response => {
-            const queueName = response.queue;
-            console.log(`Created queue ${queueName}, binding it to "viewed" exchange.`);
-            return messageChannel.bindQueue(queueName, "viewed", "") // Bind the queue to the exchange.
-                .then(() => {
-                    return messageChannel.consume(queueName, consumeViewedMessage); // Start receiving messages from the anonymous queue.
-                });
-        });
 }
 
-//
-// Start the HTTP server.
-//
-function startHttpServer(db, messageChannel) {
-    return new Promise(resolve => { // Wrap in a promise so we can be notified when the server has started.
+function randomNumber(number) {
+    return Math.floor(Math.random() * number) + 1;
+}
+
+function startHttpServer() {
+    return new Promise(resolve => {
         const app = express();
-        app.use(bodyParser.json()); // Enable JSON body for HTTP requests.
-        setupHandlers(app, db, messageChannel);
+        setupHandlers(app);
 
         const port = process.env.PORT && parseInt(process.env.PORT) || 3000;
         app.listen(port, () => {
-            resolve(); // HTTP server is listening, resolve the promise.
+            resolve();
         });
     });
 }
 
-//
-// Application entry point.
-//
 function main() {
-    return connectDb()                                          // Connect to the database...
-        .then(db => {                                           // then...
-            return connectRabbit()                              // connect to RabbitMQ...
-                .then(messageChannel => {                       // then...
-                    return startHttpServer(db, messageChannel); // start the HTTP server.
-                });
-        });
+    return startHttpServer();
 }
 
 main()
